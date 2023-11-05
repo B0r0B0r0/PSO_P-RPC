@@ -11,14 +11,17 @@ void push(tuplacc** queue,tuplacc value,int* size)
     (*size)++;
 }
 
-tuplacc pop(tuplacc** queue,int *size)
+tuplacc pop(tuplacc** queue,int *size,int index)
 {
     if(*size==0)
         return;
 
+    if (index>*size)
+        return;
+
     tuplacc lvalue = *queue[0];
 
-    for(int i = 0; i<(*size)-1;i++)
+    for(int i = index; i<(*size)-1;i++)
         {
             (*queue)[i].a=strdup((*queue)[i+1].a);
             (*queue)[i].b=strdup((*queue)[i+1].b);

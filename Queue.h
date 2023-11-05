@@ -3,6 +3,6 @@
 #include "Structs.h"
 
 void push(tuplacc**,tuplacc,int*);
-tuplacc pop(tuplacc**,int*);
+tuplacc pop(tuplacc**,int*,int);
 
 #endif

@@ -2,13 +2,23 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
 #include "Structs.h"
 #include "Queue.h"
 
-int dimensiuneCoada=1;
+#pragma region Global Variables
+
+int dimensiuneCoada=0;
 int curActiveThreads=0;
 tuplacc *coadaReq;
 pthread_mutex_t mutex;
+int sockfd, newsockfd, portno, clilen, n;
+struct sockaddr_in serv_addr, cli_addr;
+char buffer[256];
+
+#pragma endregion
 
 #pragma region  Initializari
 
@@ -17,7 +27,22 @@ void* manageQueue(void*);
 
 void initialiseSocket()
 {
-     
+    //deschid socket
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+        printf("ERROR opening socket");
+
+    // initializez serv_addr cu 0-uri
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+
+    portno = 1234;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(portno);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    if (bind(sockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+        printf("ERROR on binding");
+
+    listen(sockfd,5);
 }
 
 void initialiseManThread()
@@ -31,8 +56,21 @@ void initialiseManThread()
 
 
 #pragma region Main thread functions
-void listen()
+void listening()
 {
+    clilen = sizeof(cli_addr);
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    
+    if (newsockfd < 0)
+        printf("ERROR on accept");
+
+    bzero(buffer,256);
+    n = read(newsockfd,buffer,255);
+    if (n < 0) printf("ERROR reading from socket");
+        printf("Here is the message: %s",buffer);
+    n = write(newsockfd,"I got your message",18);
+    if (n < 0)
+        printf("ERROR writing to socket");
 
 }
 #pragma endregion
@@ -64,10 +102,10 @@ void* manageQueue(void* p)
 
 void* calculate(void* p)
 {
-    printf("Hello, World!");
+
+
     pthread_mutex_lock(&mutex);
     curActiveThreads--;
-    dimensiuneCoada--;
     pthread_mutex_unlock(&mutex);
 }
 
@@ -83,7 +121,7 @@ void main()
 
     while(1)
     {
-        listen();
+        listening();
     }
 
 }
