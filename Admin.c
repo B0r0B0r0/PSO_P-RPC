@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -5,18 +6,30 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include "Structs.h"
 #include "Queue.h"
 
 #pragma region Global Variables
+// variabile coada requesturi
+char **coadaReq;
+int dimReq=0;
 
-int dimensiuneCoada=0;
+// variabile threaduri
 int curActiveThreads=0;
-tuplacc *coadaReq;
 pthread_mutex_t mutex;
-int sockfd, newsockfd, portno, clilen, n;
+
+// variabile conexiuni
+int sockfd, portno, clilen, n;
 struct sockaddr_in serv_addr, cli_addr;
-char buffer[256];
+
+// variabile coada conexiuni
+int* conexiuni;
+int dimConex=0;
+
+// variabile coada Send
+tuplacc* coadaSends;
+int dimSend=0;
 
 #pragma endregion
 
@@ -24,6 +37,7 @@ char buffer[256];
 
 void* calculate(void*);
 void* manageQueue(void*);
+void* listening(void*);
 
 void initialiseSocket()
 {
@@ -35,14 +49,14 @@ void initialiseSocket()
     // initializez serv_addr cu 0-uri
     bzero((char *) &serv_addr, sizeof(serv_addr));
 
-    portno = 1234;
+    portno = 2002;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(portno);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     if (bind(sockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         printf("ERROR on binding");
 
-    listen(sockfd,5);
+    listen(sockfd,10);
 }
 
 void initialiseManThread()
@@ -51,28 +65,71 @@ void initialiseManThread()
     pthread_create(&id,NULL,manageQueue,NULL);
 }
 
+void initialiseListenThread()
+{
+    pthread_t id;
+    pthread_create(&id,NULL,listening,NULL);
+}
 #pragma endregion
 
 
 
 #pragma region Main thread functions
-void listening()
+void* listening(void* p)
 {
-    clilen = sizeof(cli_addr);
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    
-    if (newsockfd < 0)
-        printf("ERROR on accept");
+    while(1)
+    {
+        clilen = sizeof(cli_addr);
+        int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        
+        if(newsockfd<0)
+            return;
+        
 
-    bzero(buffer,256);
-    n = read(newsockfd,buffer,255);
-    if (n < 0) printf("ERROR reading from socket");
-        printf("Here is the message: %s",buffer);
-    n = write(newsockfd,"I got your message",18);
+        char buffer[256];
+        char nsfd[100]; 
+        sprintf(nsfd,"%d",dimConex);
+        strcpy(buffer,nsfd);
+        strcat(buffer,"/");
+        pushi(&conexiuni,newsockfd,&dimConex);
+
+
+        int offset = strlen(buffer);
+        bzero(buffer+offset,256-offset);
+
+        n = read(newsockfd,buffer+offset,255-offset);
+        if (n < 0) 
+            printf("ERROR reading from socket");
+            
+        // buffer - un fisier care are [protocol]/[payload]
+
+        pushc(&coadaReq,buffer,&dimReq);
+    }    
+    
+    
+
+}
+
+void sending()
+{
+    if(dimSend==0)
+        return;
+
+    tuplacc pachet = popt(&coadaSends,&dimSend,0);
+    int sndsockfd = popi(&conexiuni,atoi(pachet.a),&dimConex);
+
+    pthread_mutex_lock(&mutex);
+    n = write(sndsockfd,pachet.b,strlen(pachet.b));
+    //n = write(sndsockfd,"Here is your message",20);
+    pthread_mutex_unlock(&mutex);
     if (n < 0)
         printf("ERROR writing to socket");
 
+    shutdown(sndsockfd,0);
+    close(sndsockfd);
 }
+
+
 #pragma endregion
 
 
@@ -84,7 +141,7 @@ void* manageQueue(void* p)
     while(1)
     {
         pthread_mutex_lock(&mutex);
-        int dim = dimensiuneCoada;
+        int dim = dimReq;
         int cAT= curActiveThreads;
         pthread_mutex_unlock(&mutex);
 
@@ -102,7 +159,19 @@ void* manageQueue(void* p)
 
 void* calculate(void* p)
 {
+    int par= *(int*)p;
+    char* var = popc(&coadaReq,&dimReq,par);
+    tuplacc buff;
+    int i =0;
 
+    for(i=0;i<strlen(var);i++)
+        if(var[i]=='/')
+            break;
+    
+    var[i]='\0';
+    buff.a=strdup(var);
+    buff.b=strdup(var+i+1);
+    pusht(&coadaSends,buff,&dimSend);
 
     pthread_mutex_lock(&mutex);
     curActiveThreads--;
@@ -118,10 +187,12 @@ void main()
     pthread_mutex_init(&mutex,NULL);
     initialiseSocket();
     initialiseManThread();
+    initialiseListenThread();
 
     while(1)
     {
-        listening();
+        //listening();
+        sending();
     }
 
 }

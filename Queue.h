@@ -2,7 +2,17 @@
 #define QUEUE_H
 #include "Structs.h"
 
-void push(tuplacc**,tuplacc,int*);
-tuplacc pop(tuplacc**,int*,int);
+// Coada tupla
+void pusht(tuplacc**,tuplacc,int*);
+tuplacc popt(tuplacc**,int*,int);
+
+// coada char
+void pushc(char***, char*,int*);
+char* popc(char***,int*,int);
+
+//coada int
+
+void pushi(int **, int,int*);
+int popi(int**, int, int*);
 
 #endif
