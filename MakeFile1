@@ -1,0 +1,20 @@
+CC = gcc
+
+CFLAGS = -Wall -Wextra -Wno-unused-parameter -g
+LDLIBS = -lpthread
+
+all: user user1
+
+user: user.o functions_spin.o 
+	$(CC) $^ $(CFLAGS)  $(LDLIBS) --std=c99 -o $@
+
+user1: user.o functions.o 
+	$(CC) $^ $(CFLAGS)  $(LDLIBS) -o $@
+functions_spin.o: functions.c
+	$(CC) -c $(CFLAGS)  --std=c99 -o $@ $<
+
+functions.o: functions.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
+
+clean:
+	-rm -f *.o *~ user user1
