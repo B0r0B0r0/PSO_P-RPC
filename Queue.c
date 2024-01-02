@@ -3,83 +3,77 @@
 #include <string.h>
 #include <stdlib.h>
 
-void pusht(tuplacc** queue,tuplacc value,int* size)
+void pushPacket(packet **queue, packet payload, int *size)
 {
-    *queue = (tuplacc*)realloc(*queue,((*size)+1)*sizeof(tuplacc));
-    (*queue)[*size].a = strdup(value.a);
-    (*queue)[*size].b = strdup(value.b);
-    (*size)++;
+	*queue = (packet *)realloc(*queue, ((*size) + 1) * sizeof(packet));
+	(*queue)[*size].id = payload.id;
+	(*queue)[*size].prot = payload.prot;
+	(*queue)[*size].sockfd = payload.sockfd;
+	(*queue)[*size].payload = strdup(payload.payload);
+	(*size)++;
 }
 
-tuplacc popt(tuplacc** queue,int *size,int index)
+packet popPacket(packet **queue, int index, int *size)
 {
-    if(*size==0)
-        return;
+	packet lvalue;
+	lvalue.sockfd = -1;
+	if (*size == 0)
+		return lvalue;
 
-    if (index>*size)
-        return;
+	if (index > *size)
+		return lvalue;
 
-    tuplacc lvalue = *queue[index];
+	lvalue.sockfd = (*queue)[index].sockfd;
+	lvalue.prot = (*queue)[index].prot;
+	lvalue.id = (*queue)[index].id;
+	lvalue.payload = strdup((*queue)[index].payload);
 
-    for(int i = index; i<(*size)-1;i++)
-        {
-            (*queue)[i].a=strdup((*queue)[i+1].a);
-            (*queue)[i].b=strdup((*queue)[i+1].b);
-        }
+	for (int i = index; i < (*size) - 1; i++)
+		(*queue)[i] = (*queue)[i + 1];
 
-    (*queue)[(*size)-1].a = strdup("0");
-    (*queue)[(*size)-1].b = strdup("0");
-    *queue = (tuplacc*)realloc(*queue,((*size)-1)*sizeof(tuplacc));
-    (*size)--;
-    return lvalue;
+	*queue = (packet *)realloc(*queue, ((*size) - 1) * sizeof(packet));
+	(*size)--;
+	return lvalue;
 }
 
-
-void pushc(char*** queue, char* value, int* size)
+void pushProcess(process **queue, process proc, int *size)
 {
-    *queue = (char**)realloc(*queue,((*size)+1)*sizeof(char**));
-    (*queue)[*size] = strdup(value);
-    (*size)++;
+	*queue = (process *)realloc(*queue, ((*size) + 1) * sizeof(process));
+	(*queue)->id = proc.id;
+	(*queue)->nrFunc = proc.nrFunc;
+	(*queue)->sockfd = proc.sockfd;
+	(*queue)->functionTable = (char **)malloc(proc.nrFunc * sizeof(char *));
+	for (int i = 0; i < proc.nrFunc; i++)
+		(*queue)->functionTable[i] = strdup(proc.functionTable[i]);
+
+	(*size)++;
 }
 
-char* popc (char*** queue, int* size, int index)
+process popProcess(process **queue, int index, int *size)
 {
-    if(*size==0)
-        return;
+	process lvalue;
+	lvalue.sockfd = -1;
 
-    if (index>*size)
-        return;
+	if (*size == 0)
+		return lvalue;
 
-    char* lvalue = strdup((*queue)[index]);
-    for(int i=index;i<(*size)-1;i++)
-        (*queue)[i]=strdup((*queue)[i+1]);
-    
-    *queue = (char**)realloc(*queue,((*size)-1)*sizeof(char*));
-    (*size)--;
-    return lvalue;
+	if (index > *size)
+		return lvalue;
+
+	if (index < 0)
+		return lvalue;
+
+	lvalue.id = (*queue)[index].id;
+	lvalue.nrFunc = (*queue)[index].nrFunc;
+	lvalue.sockfd = (*queue)[index].sockfd;
+	lvalue.functionTable = (char **)malloc(lvalue.nrFunc * sizeof(char *));
+	for (int i = 0; i < lvalue.nrFunc; i++)
+		lvalue.functionTable[i] = strdup((*queue)[index].functionTable[i]);
+
+	for (int i = index; i < (*size) - 1; i++)
+		(*queue)[i] = (*queue)[i + 1];
+
+	*queue = (process *)realloc(*queue, ((*size) - 1) * sizeof(process));
+	(*size)--;
+	return lvalue;
 }
-
-void pushi(int **queue, int value, int* size)
-{
-    *queue = (int*)realloc(*queue, ((*size)+1)*sizeof(int));
-    (*queue)[*size] = value;
-    (*size)++;
-}
-
-int popi(int **queue, int index, int* size)
-{
-    if(*size==0)
-        return;
-
-    if (index>*size)
-        return;
-    
-    int lvalue = (*queue)[index];
-    for(int i = index;i<(*size)-1;i++)
-        (*queue)[i]=(*queue)[i+1];
-    
-    *queue=(int*)realloc(*queue,((*size)-1)*sizeof(int));
-    (*size)--;
-    return lvalue;
-}
-
