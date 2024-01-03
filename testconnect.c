@@ -36,10 +36,22 @@ void main()
 	if (n < 0)
 		printf("ERROR writing to socket");
 	bzero(buffer, 256);
-	n = read(sockfd, buffer, 255);
-	if (n < 0)
-		printf("ERROR reading from socket");
-	printf("Received message is: %s", buffer);
+
+	// inchide conex
+	close(sockfd);
+	shutdown(sockfd, 0);
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd < 0)
+		printf("ERROR opening socket");
+
+	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	{
+		perror("Connection failed");
+		exit(EXIT_FAILURE);
+	}
+	printf("Connection succesful!\n");
+
 	printf("Please enter the message: ");
 	bzero(buffer, 256);
 	fgets(buffer, 255, stdin);
@@ -47,10 +59,11 @@ void main()
 	if (n < 0)
 		printf("ERROR writing to socket");
 	bzero(buffer, 256);
+
 	n = read(sockfd, buffer, 255);
 	if (n < 0)
 		printf("ERROR reading from socket");
-	printf("Received message is: %s", buffer);
+	printf("Received message is: %s\n", buffer);
 	while (1)
 		;
 }

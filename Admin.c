@@ -49,6 +49,13 @@ void initialiseSocket(int portNumber, connection *con)
 	if (con->sockfd < 0)
 		printf("ERROR opening socket");
 
+	int opt = 1;
+	if (setsockopt(con->sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+	{
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+
 	// initializez serv_addr cu 0-uri
 	bzero((char *)&con->serv_addr, sizeof(con->serv_addr));
 
@@ -132,19 +139,22 @@ void *listenUsers(void *p)
 		aux.sockfd = newsockfd;
 		char protAux = buffer[0];
 		strcpy(buffer, buffer + 2);
-
 		if (protAux == '2')
 		{
 			char bufAux[16];
+
 			int i = 0;
 			while (buffer[i] != '/')
-				bufAux[i] = buffer[i++];
+			{
+				bufAux[i] = buffer[i];
+				i++;
+			}
+
 			aux.id = atoi(bufAux);
-			strcpy(buffer, buffer + i);
+			strcpy(buffer, buffer + i + 1);
 		}
 		else
 			aux.id = 0;
-
 		char crAux = buffer[0];
 		strcpy(buffer, buffer + 2);
 
@@ -158,7 +168,14 @@ void *listenUsers(void *p)
 		{
 			aux.payload = "\0";
 			aux.prot = 2;
+
 			pushPacket(&coadaRequests, aux, &dimRequests);
+		}
+
+		if (aux.id != 0 && aux.prot != 2)
+		{
+			close(newsockfd);
+			shutdown(newsockfd, 0);
 		}
 	}
 }
@@ -267,6 +284,7 @@ void searchAndSend(packet par)
 	while (1)
 	{
 		for (int i = 0; i < dimSends; i++)
+
 			if (coadaSends[i].id == id)
 			{
 				packet toSend = popPacket(&coadaSends, i, &dimSends);
@@ -285,12 +303,10 @@ void *calculate(void *p)
 	packet aux = popPacket(&coadaRequests, 0, &dimRequests);
 	if (aux.sockfd == -1)
 		goto final;
+
 	// scot numele functiei din pachet
 	// verific daca este protocol de calculate sau de send
 	// indicat sa fac doua functii
-
-	sendToSockFd("Received!\n", aux.sockfd);
-	goto final;
 
 	if (aux.prot == 2)
 	{
@@ -304,10 +320,12 @@ void *calculate(void *p)
 		sendToSockFd("Function could not be found", aux.sockfd);
 		goto final;
 	}
+
 	sendToSockFd(aux.payload, proc.sockfd);
 
 	char response[1024];
-	read(proc.sockfd, response, strlen(response));
+
+	read(proc.sockfd, response, 1024);
 
 	// trimitere pachet la emitator
 	if (aux.id == 0)
